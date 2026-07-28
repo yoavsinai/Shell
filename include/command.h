@@ -12,17 +12,18 @@
 
 #define LINE_BUFFER_SIZE 512
 
-// Max args a single command can take (including the NULL terminator).
-#define MAX_ARGS 10
+// Max argv a single command can take (including the NULL terminator).
+#define MAX_ARGS LINE_BUFFER_SIZE
 
 // Max number of commands chained with '|' in one pipeline.
-#define MAX_PIPELINE_STAGES 5
+#define MAX_PIPELINE_STAGES LINE_BUFFER_SIZE
 
 // One stage of a pipeline: an argv plus the fds it reads from / writes to.
 // in_fd/out_fd default to STDIN_FILENO/STDOUT_FILENO and are only replaced
 // by explicit '<'/'>'/'>>' redirection or by connect_pipeline().
 struct Command {
-    char* args[MAX_ARGS];
+    char* argv[MAX_ARGS];
+    int argc;
     int in_fd;
     int out_fd;
 };

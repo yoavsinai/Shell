@@ -2,14 +2,32 @@
 #include "executor.h"
 #include "lexer.h"
 #include "parse_command.h"
+#include "signal_handler.h"
 
-int main(int argc, char* argv[])
+int main()
 {
     char line[LINE_BUFFER_SIZE];
     uid_t uid = getuid();
     struct passwd* pw = getpwuid(uid);
     if (pw == NULL) {
         perror("getpwuid failed");
+        return 0;
+    }
+
+    struct sigaction act = { 0 };
+    act.sa_handler = &sigint_handler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = SA_RESTART;
+
+    if (sigaction(SIGINT, &act, NULL) < 0) {
+        perror("sigaction failed");
+        return 0;
+    }
+
+    act.sa_handler = &sigchld_handler;
+
+    if (sigaction(SIGCHLD, &act, NULL) < 0) {
+        perror("sigaction failed");
         return 0;
     }
 
@@ -41,13 +59,18 @@ int main(int argc, char* argv[])
             stage = strtok_r(NULL, pipe_delim, &pipe_saveptr);
         }
 
-        if (pipeline[0].args[0] == NULL)
+        if (num_cmds == MAX_PIPELINE_STAGES - 1 && stage != NULL) {
+            fprintf(stderr, "Error: Too many commands in pipeline (max %d)\n", MAX_PIPELINE_STAGES);
+            continue;
+        }
+
+        if (pipeline[0].argv[0] == NULL)
             continue;
 
-        if (strcmp(pipeline[0].args[0], "!exit") == 0)
+        if (strcmp(pipeline[0].argv[0], "!exit") == 0)
             break;
-        if (strcmp(pipeline[0].args[0], "cd") == 0) {
-            const char* target_dir = pipeline[0].args[1] ? pipeline[0].args[1] : pw->pw_dir;
+        if (strcmp(pipeline[0].argv[0], "cd") == 0) {
+            const char* target_dir = pipeline[0].argv[1] ? pipeline[0].argv[1] : pw->pw_dir;
             if (chdir(target_dir) < 0) {
                 perror("chdir failed");
             }

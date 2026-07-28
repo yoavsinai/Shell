@@ -26,6 +26,12 @@ void connect_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
 
 void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds)
 {
+    short background = 0;
+    struct Command* last_cmd = &pipeline[num_cmds - 1];
+    if (strcmp(last_cmd->argv[last_cmd->argc - 1], "&") == 0) {
+        background = 1;
+        last_cmd->argv[last_cmd->argc - 1] = NULL;
+    }
     for (int i = 0; i < num_cmds; i++) {
         pid_t pid = fork();
 
@@ -45,7 +51,7 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
                 close(pipeline[i].out_fd);
             }
 
-            execvp(pipeline[i].args[0], pipeline[i].args);
+            execvp(pipeline[i].argv[0], pipeline[i].argv);
             perror("execvp failed");
             exit(EXIT_FAILURE);
         }
@@ -57,7 +63,8 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
             close(pipeline[i].out_fd);
     }
 
-    for (int i = 0; i < num_cmds; i++) {
-        wait(NULL);
-    }
+    if (!background)
+        for (int i = 0; i < num_cmds; i++) {
+            wait(NULL);
+        }
 }

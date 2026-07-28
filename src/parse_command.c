@@ -8,13 +8,22 @@ int parse_command(char* cmd_str, struct Command* cmd)
 
     mask_quoted_whitespace(cmd_str);
 
-    int arg_count = 0;
+    int argv_count = 0;
     char* saveptr;
     char delim[] = " \t\r\n";
     char* token = strtok_r(cmd_str, delim, &saveptr);
 
     while (token != NULL) {
         unquote_token(token);
+
+        if (token[0] == '$') {
+            char* env_var = getenv(token + 1);
+            if (env_var != NULL) {
+                token = env_var;
+            } else {
+                token = "";
+            }
+        }
 
         if (strcmp(token, "<") == 0) {
             token = strtok_r(NULL, delim, &saveptr);
@@ -56,11 +65,12 @@ int parse_command(char* cmd_str, struct Command* cmd)
             }
 
         } else {
-            cmd->args[arg_count++] = token;
+            cmd->argv[argv_count++] = token;
         }
         token = strtok_r(NULL, delim, &saveptr);
     }
 
-    cmd->args[arg_count] = NULL;
+    cmd->argv[argv_count] = NULL;
+    cmd->argc = argv_count;
     return 0;
 }
