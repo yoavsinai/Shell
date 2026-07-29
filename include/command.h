@@ -12,6 +12,8 @@
 
 #define LINE_BUFFER_SIZE 512
 
+#define MAX_HISTORY 100
+
 // Max argv a single command can take (including the NULL terminator).
 #define MAX_ARGS LINE_BUFFER_SIZE
 

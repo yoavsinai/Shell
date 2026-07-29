@@ -14,6 +14,9 @@ int main()
         return 0;
     }
 
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+
     struct sigaction act = { 0 };
     act.sa_handler = &sigint_handler;
     sigemptyset(&act.sa_mask);
@@ -31,6 +34,15 @@ int main()
         return 0;
     }
 
+    char history_path[LINE_BUFFER_SIZE];
+    sprintf(history_path, "%s/.my_shell_history", getenv("HOME") ? getenv("HOME") : "/tmp/.my_shell_history");
+
+    int history_fd = open(history_path, O_CREAT | O_APPEND | O_WRONLY, 0644);
+    if (history_fd < 0) {
+        perror("open history file failed");
+        return 0;
+    }
+
     while (1) {
         char cwd[LINE_BUFFER_SIZE];
         if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -42,6 +54,11 @@ int main()
 
         if (fgets(line, LINE_BUFFER_SIZE, stdin) == NULL)
             break;
+
+        if (write(history_fd, line, strlen(line)) < 0) {
+            perror("write history failed");
+            break;
+        }
 
         char normalized_line[LINE_BUFFER_SIZE * 2];
         normalize_redirects(line, normalized_line, sizeof(normalized_line));
@@ -74,6 +91,20 @@ int main()
             if (chdir(target_dir) < 0) {
                 perror("chdir failed");
             }
+            continue;
+        }
+        if (strcmp(pipeline[0].argv[0], "history") == 0) {
+            FILE* history_file = fopen(history_path, "r");
+            if (history_file == NULL) {
+                perror("fopen history file failed");
+                continue;
+            }
+            char history_line[LINE_BUFFER_SIZE];
+            int line_number = 1;
+            while (fgets(history_line, sizeof(char) * LINE_BUFFER_SIZE, history_file)) {
+                printf("%d: %s", line_number++, history_line);
+            }
+            fclose(history_file);
             continue;
         }
 

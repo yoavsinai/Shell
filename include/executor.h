@@ -2,6 +2,7 @@
 #define EXECUTOR_H
 
 #include "command.h"
+#include <signal.h>
 
 // Wires adjacent stages together with pipe(2): stage i's stdout feeds
 // stage i+1's stdin, unless either side already has an explicit file

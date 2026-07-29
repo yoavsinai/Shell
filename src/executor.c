@@ -32,6 +32,11 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
         background = 1;
         last_cmd->argv[last_cmd->argc - 1] = NULL;
     }
+
+    pid_t pids[MAX_PIPELINE_STAGES];
+
+    pid_t pgid = 0; // Process group ID for the pipeline
+
     for (int i = 0; i < num_cmds; i++) {
         pid_t pid = fork();
 
@@ -51,10 +56,20 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
                 close(pipeline[i].out_fd);
             }
 
+            setpgid(0, pgid); // Set the child process group ID to its own PID
+            signal(SIGINT, SIG_DFL); // Restore default signal handling for SIGINT in the child process
+
             execvp(pipeline[i].argv[0], pipeline[i].argv);
             perror("execvp failed");
             exit(EXIT_FAILURE);
         }
+
+        pids[i] = pid;
+
+        if (pgid == 0) {
+            pgid = pid; // Set the process group ID to the first child's PID
+        }
+        setpgid(pid, pgid); // Set the child process group ID to the pipeline's PID
 
         // Parent must also close its copies, or the pipe never sees EOF.
         if (pipeline[i].in_fd != STDIN_FILENO)
@@ -63,8 +78,11 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
             close(pipeline[i].out_fd);
     }
 
-    if (!background)
+    if (!background) {
+        tcsetpgrp(STDIN_FILENO, pgid); // Set the terminal's foreground process group to the pipeline's PID
         for (int i = 0; i < num_cmds; i++) {
-            wait(NULL);
+            waitpid(pids[i], NULL, 0);
         }
+        tcsetpgrp(STDIN_FILENO, getpgrp()); // Restore the terminal's foreground process group to the shell
+    }
 }
