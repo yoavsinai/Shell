@@ -19,6 +19,18 @@ int parse_command(char* cmd_str, struct Command* cmd)
     while (token != NULL) {
         unquote_token(token);
 
+        // "~" or "~/..." expands to $HOME, same as most shells; "~user"
+        // (another user's home directory) isn't supported.
+        if (token[0] == '~' && (token[1] == '\0' || token[1] == '/')) {
+            const char* home = getenv("HOME");
+            if (home != NULL) {
+                char* new_token = malloc(strlen(home) + strlen(token + 1) + 1);
+                strcpy(new_token, home);
+                strcat(new_token, token + 1);
+                token = new_token;
+            }
+        }
+
         if (token[0] == '$') {
             char status_buf[16];
             const char* value;
