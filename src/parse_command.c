@@ -1,4 +1,5 @@
 #include "parse_command.h"
+#include "exit_status.h"
 #include "lexer.h"
 #include <ctype.h>
 
@@ -18,20 +19,30 @@ int parse_command(char* cmd_str, struct Command* cmd)
         unquote_token(token);
 
         if (token[0] == '$') {
-            char prev_char = 0;
-            int i = 1;
-            for (; token[i] != '\0'; i++) {
-                if (!isalnum(token[i]) && token[i] != '_') {
-                    prev_char = token[i];
-                    token[i] = 0;
-                    break;
+            char status_buf[16];
+            const char* value;
+            int i;
+
+            if (token[1] == '?') {
+                i = 2;
+                snprintf(status_buf, sizeof(status_buf), "%d", last_exit_status);
+                value = status_buf;
+            } else {
+                i = 1;
+                for (; token[i] != '\0'; i++) {
+                    if (!isalnum(token[i]) && token[i] != '_') {
+                        break;
+                    }
                 }
+                char suffix_char = token[i];
+                token[i] = 0;
+                value = getenv(token + 1);
+                token[i] = suffix_char;
             }
-            char* env_var = getenv(token + 1);
-            token[i] = prev_char;
-            if (env_var != NULL) {
-                char* new_token = malloc(strlen(env_var) + strlen(token + i) + 1);
-                strcpy(new_token, env_var);
+
+            if (value != NULL) {
+                char* new_token = malloc(strlen(value) + strlen(token + i) + 1);
+                strcpy(new_token, value);
                 strcat(new_token, token + i);
                 token = new_token;
             } else {

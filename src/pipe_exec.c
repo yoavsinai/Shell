@@ -1,4 +1,5 @@
 #include "pipe_exec.h"
+#include "exit_status.h"
 #include "jobs.h"
 #include <signal.h>
 
@@ -58,9 +59,25 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
 
     if (!background) {
         tcsetpgrp(STDIN_FILENO, pgid); // Set the terminal's foreground process group to the pipeline's PID
+
+        // A SIGTSTP stops every process in the group at once, but waitpid()
+        // only reports one event per call, so wait once per pipeline stage
+        // (on the group, not a single pid) to collect them all instead of
+        // stopping early and leaving later stages unwaited.
+        int stopped = 0;
         for (int i = 0; i < num_cmds; i++) {
-            waitpid(pids[i], NULL, 0);
+            int status = 0;
+            pid_t waited_pid = waitpid(-pgid, &status, WUNTRACED);
+            if (WIFSTOPPED(status)) {
+                stopped = 1;
+            } else if (waited_pid == pids[num_cmds - 1]) {
+                // "$?" reflects the exit status of the last pipeline stage.
+                last_exit_status = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+            }
         }
+        if (stopped)
+            add_stopped_job(pgid, pids, num_cmds, cmd_line);
+
         tcsetpgrp(STDIN_FILENO, getpgrp()); // Restore the terminal's foreground process group to the shell
     } else {
         add_background_job(pgid, pids, num_cmds, cmd_line);
