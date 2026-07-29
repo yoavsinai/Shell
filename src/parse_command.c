@@ -1,5 +1,6 @@
 #include "parse_command.h"
 #include "lexer.h"
+#include <ctype.h>
 
 int parse_command(char* cmd_str, struct Command* cmd)
 {

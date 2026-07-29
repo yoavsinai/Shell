@@ -1,31 +1,6 @@
-#include "executor.h"
-
-job_t jobs[MAX_JOBS];
-int next_job_id = 1;
-
-void connect_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds)
-{
-    int pipefd[2];
-    for (int i = 0; i < num_cmds - 1; i++) {
-        if (pipe(pipefd) == -1) {
-            perror("pipe failed");
-            exit(EXIT_FAILURE);
-        }
-
-        // Only hook up the pipe if the user didn't already redirect with '>'/'<'.
-        if (pipeline[i].out_fd == STDOUT_FILENO) {
-            pipeline[i].out_fd = pipefd[1];
-        } else {
-            close(pipefd[1]);
-        }
-
-        if (pipeline[i + 1].in_fd == STDIN_FILENO) {
-            pipeline[i + 1].in_fd = pipefd[0];
-        } else {
-            close(pipefd[0]);
-        }
-    }
-}
+#include "pipe_exec.h"
+#include "jobs.h"
+#include <signal.h>
 
 void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds, char cmd_line[LINE_BUFFER_SIZE])
 {
@@ -88,28 +63,6 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
         }
         tcsetpgrp(STDIN_FILENO, getpgrp()); // Restore the terminal's foreground process group to the shell
     } else {
-        int slot = -1;
-        for (int i = 0; i < MAX_JOBS; i++) {
-            if (!jobs[i].in_use) {
-                slot = i;
-                break;
-            }
-        }
-        if (slot == -1) {
-            fprintf(stderr, "Error: Maximum number of background jobs reached\n");
-            return;
-        } else {
-            jobs[slot].job_id = next_job_id++;
-            jobs[slot].pgid = pgid;
-            jobs[slot].num_pids = num_cmds;
-            for (int i = 0; i < num_cmds; i++) {
-                jobs[slot].pids[i] = pids[i];
-            }
-            jobs[slot].state = JOB_RUNNING;
-            jobs[slot].in_use = 1;
-            strncpy(jobs[slot].cmd_line, cmd_line, LINE_BUFFER_SIZE - 1);
-            jobs[slot].cmd_line[LINE_BUFFER_SIZE - 1] = '\0';
-            printf("[%d] %d\n", jobs[slot].job_id, pgid);
-        }
+        add_background_job(pgid, pids, num_cmds, cmd_line);
     }
 }

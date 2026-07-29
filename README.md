@@ -11,7 +11,10 @@ management.
 - I/O redirection: `<`, `>`, `>>` (works with or without surrounding spaces,
   e.g. both `cat < file` and `cat<file`)
 - Quoted arguments: `grep -v "some phrase" < file`
-- Builtins: `cd [dir]` and `!exit`
+- `$VAR` expansion: `echo $HOME`
+- Background jobs: `sleep 10 &`, listed with `jobs`, reaped automatically
+  when they finish
+- Builtins: `cd [dir]`, `!exit`, `history`, and `jobs`
 
 ## Build
 
@@ -60,7 +63,9 @@ Removes the `build/` directory.
 ## Project layout
 
 ```
-include/    headers, one per module (command, lexer, parse_command, executor)
+include/    headers, one per module (command, lexer, parse_command,
+            pipe_connect, pipe_exec, jobs, signal_handler, builtins,
+            shell_init)
 src/        implementation files
 tests/      sample input files for manual testing
 Makefile

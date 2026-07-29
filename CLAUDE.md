@@ -5,8 +5,9 @@ Guidance for Claude Code (or any future contributor) working in this repository.
 ## What this is
 
 A small POSIX shell implemented in C: a REPL that supports piping (`|`), I/O
-redirection (`<`, `>`, `>>`), quoted arguments, and the builtins `cd` and
-`!exit`.
+redirection (`<`, `>`, `>>`), quoted arguments, `$VAR` expansion, background
+jobs (`&`) with job control, and the builtins `cd`, `!exit`, `history`, and
+`jobs`.
 
 ## Build & run
 
@@ -24,11 +25,27 @@ aren't visible under strict C11 without that feature-test macro.
 
 ```
 include/command.h        struct Command + shared size constants
+include/jobs.h + src/jobs.c                the global jobs[] table and
+                                            add_background_job()
 include/lexer.h + src/lexer.c              line preprocessing (redirect
                                             spacing, quote masking/unquoting)
 include/parse_command.h + src/parse_command.c   tokens -> struct Command
-include/executor.h + src/executor.c        wire up pipes, fork/exec, wait
-src/main.c                                 REPL loop, builtins, wiring
+                                            (also does $VAR expansion)
+include/pipe_connect.h + src/pipe_connect.c   wire pipe(2) between adjacent
+                                            pipeline stages
+include/pipe_exec.h + src/pipe_exec.c      fork/exec/setpgid each stage,
+                                            foreground wait or background job
+                                            registration (via jobs.c)
+include/signal_handler.h + src/signal_handler.c   SIGINT (ignore in the
+                                            shell) and SIGCHLD (reap
+                                            background jobs, mark them done)
+include/builtins.h + src/builtins.c        cd / !exit / history / jobs
+include/shell_init.h + src/shell_init.c    one-time startup: signal
+                                            handlers, user lookup, history
+                                            file
+src/main.c                                 REPL loop: prompt, read, parse,
+                                            dispatch to builtins or the
+                                            executor
 tests/                                     sample input files used for manual testing
 ```
 
@@ -71,18 +88,27 @@ This only handles simple, non-nested, non-escaped quoting — good enough for
 ## Known limitations (intentionally not "fixed" yet — ask before changing)
 
 - `parse_command()`'s `arg_count` has no bound check against `MAX_ARGS` — a
-  command with more than 9 arguments overflows `cmd->args[]`.
+  command with more than `MAX_ARGS - 1` arguments overflows `cmd->argv[]`.
 - No escaping (`\"`, `\\`) inside or outside quotes.
-- No `&&`, `;`, background jobs (`&`), globbing, or variable expansion.
-- Builtins are limited to `cd` and `!exit`; everything else goes through
-  `execvp`.
+- No `&&`, `;`, globbing, subshells, or command substitution.
+- `$VAR` expansion only handles a single `$NAME` per token (no `${...}`,
+  no expansion inside quotes).
+- Background jobs support `&`, `jobs`, and SIGCHLD-driven reaping, but not
+  `fg`/`bg` or stopping/resuming a job (`JOB_STOPPED` is defined but nothing
+  ever sets it).
+- Builtins are limited to `cd`, `!exit`, `history`, and `jobs`; everything
+  else goes through `execvp`.
 
 ## Conventions
 
 - One responsibility per module: line preprocessing (`lexer`), turning
-  tokens into a `Command` (`parse_command`), and running a pipeline
-  (`executor`) are kept separate — don't fold unrelated concerns back into
-  `main.c` or into each other.
+  tokens into a `Command` (`parse_command`), wiring pipes (`pipe_connect`),
+  forking/exec'ing a pipeline (`pipe_exec`), the background job table
+  (`jobs`), signal handling (`signal_handler`), builtin commands
+  (`builtins`), and one-time startup (`shell_init`) are kept separate —
+  don't fold unrelated concerns back into `main.c` or into each other.
+  `main.c` should stay a thin REPL loop that wires the other modules
+  together.
 - Constants live in `command.h`: `MAX_ARGS` (args per single command,
   including the NULL terminator) is distinct from `MAX_PIPELINE_STAGES`
   (commands chained with `|`) — don't conflate them.
