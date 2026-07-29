@@ -49,6 +49,14 @@ int main()
             perror("getcwd failed");
             break;
         }
+
+        for (int i = 0; i < MAX_JOBS; i++) {
+            if (jobs[i].in_use && jobs[i].state == JOB_DONE) {
+                printf("[%d] Done\t%s\n", jobs[i].job_id, jobs[i].cmd_line);
+                jobs[i].in_use = 0;
+            }
+        }
+
         printf("%s:%s$ ", pw->pw_name, cwd);
         fflush(stdout);
 
@@ -107,9 +115,19 @@ int main()
             fclose(history_file);
             continue;
         }
+        if (strcmp(pipeline[0].argv[0], "jobs") == 0) {
+            for (int i = 0; i < MAX_JOBS; i++) {
+                if (jobs[i].in_use) {
+                    const char* state_str = (jobs[i].state == JOB_RUNNING) ? "Running" : (jobs[i].state == JOB_STOPPED) ? "Stopped"
+                                                                                                                        : "Done";
+                    printf("[%d] %s\t%s\n", jobs[i].job_id, state_str, jobs[i].cmd_line);
+                }
+            }
+            continue;
+        }
 
         connect_pipeline(pipeline, num_cmds);
-        execute_pipeline(pipeline, num_cmds);
+        execute_pipeline(pipeline, num_cmds, line);
     }
     return 0;
 }

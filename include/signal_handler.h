@@ -2,6 +2,7 @@
 #define SIGNAL_HANDLER_H
 
 #include "command.h"
+#include "jobs.h"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

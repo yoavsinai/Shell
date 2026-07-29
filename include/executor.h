@@ -2,6 +2,7 @@
 #define EXECUTOR_H
 
 #include "command.h"
+#include "jobs.h"
 #include <signal.h>
 
 // Wires adjacent stages together with pipe(2): stage i's stdout feeds
@@ -11,6 +12,6 @@ void connect_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
 
 // Forks one child per stage, wires up in_fd/out_fd via dup2, execvp's the
 // stage's argv, and waits for all children to finish.
-void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds);
+void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds, char cmd_line[LINE_BUFFER_SIZE]);
 
 #endif
