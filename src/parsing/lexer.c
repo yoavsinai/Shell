@@ -1,4 +1,4 @@
-#include "lexer.h"
+#include "parsing/lexer.h"
 
 void normalize_redirects(const char* src, char* dst, size_t dst_size)
 {

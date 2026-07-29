@@ -1,5 +1,6 @@
 #include "builtins/export.h"
-#include "exit_status.h"
+#include "core/exit_status.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,7 +9,7 @@ builtin_result_t builtin_export(struct Command* pipeline)
     char** argv = pipeline[0].argv;
     if (argv[1] == NULL) {
         fprintf(stderr, "export: usage: export NAME=VALUE\n");
-        last_exit_status = 1;
+        last_exit_status = EINVAL;
         return BUILTIN_HANDLED;
     }
 
@@ -17,7 +18,7 @@ builtin_result_t builtin_export(struct Command* pipeline)
         char* eq = strchr(argv[i], '=');
         if (eq == NULL) {
             fprintf(stderr, "export: usage: export NAME=VALUE\n");
-            status = 1;
+            status = EINVAL;
             continue;
         }
 
@@ -25,8 +26,8 @@ builtin_result_t builtin_export(struct Command* pipeline)
         const char* name = argv[i];
         const char* value = eq + 1;
         if (setenv(name, value, 1) < 0) {
+            status = errno;
             perror("export failed");
-            status = 1;
         }
         *eq = '=';
     }

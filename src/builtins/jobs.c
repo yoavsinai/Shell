@@ -1,6 +1,6 @@
 #include "builtins/jobs.h"
-#include "exit_status.h"
-#include "jobs.h"
+#include "core/exit_status.h"
+#include "jobs/job_table.h"
 
 static const char* job_state_str(job_state_t state)
 {

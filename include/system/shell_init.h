@@ -1,7 +1,7 @@
 #ifndef SHELL_INIT_H
 #define SHELL_INIT_H
 
-#include "command.h"
+#include "core/command.h"
 #include <pwd.h>
 
 // One-time shell startup: installs SIGINT/SIGCHLD/SIGTTOU/SIGTTIN handlers,

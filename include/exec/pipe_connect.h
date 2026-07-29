@@ -1,7 +1,7 @@
 #ifndef PIPE_CONNECT_H
 #define PIPE_CONNECT_H
 
-#include "command.h"
+#include "core/command.h"
 
 // Wires adjacent stages together with pipe(2): stage i's stdout feeds
 // stage i+1's stdin, unless either side already has an explicit file

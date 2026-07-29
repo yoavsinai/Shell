@@ -1,5 +1,5 @@
-#include "shell_init.h"
-#include "signal_handler.h"
+#include "system/shell_init.h"
+#include "system/signal_handler.h"
 
 struct passwd* shell_init(char history_path[LINE_BUFFER_SIZE], int* history_fd)
 {

@@ -1,6 +1,7 @@
-#include "pipe_exec.h"
-#include "exit_status.h"
-#include "jobs.h"
+#include "exec/pipe_exec.h"
+#include "core/exit_status.h"
+#include "jobs/job_table.h"
+#include <errno.h>
 #include <signal.h>
 
 void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds, char cmd_line[LINE_BUFFER_SIZE])
@@ -20,6 +21,7 @@ void execute_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds
         pid_t pid = fork();
 
         if (pid < 0) {
+            last_exit_status = errno;
             perror("fork failed");
             return;
         }

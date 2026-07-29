@@ -1,7 +1,7 @@
 #ifndef BUILTINS_H
 #define BUILTINS_H
 
-#include "command.h"
+#include "core/command.h"
 #include <pwd.h>
 
 typedef enum {

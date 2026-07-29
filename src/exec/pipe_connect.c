@@ -1,4 +1,4 @@
-#include "pipe_connect.h"
+#include "exec/pipe_connect.h"
 
 void connect_pipeline(struct Command pipeline[MAX_PIPELINE_STAGES], int num_cmds)
 {

@@ -1,4 +1,4 @@
-#include "jobs.h"
+#include "jobs/job_table.h"
 
 job_t jobs[MAX_JOBS];
 int next_job_id = 1;
@@ -59,14 +59,17 @@ job_t* find_job(int job_id)
     return NULL;
 }
 
-void wait_for_job(job_t* job)
+void wait_for_job(job_t* job, int* out_exit_status)
 {
+    pid_t last_pid = job->pids[job->num_pids - 1];
     int stopped = 0;
     for (int i = 0; i < job->num_pids; i++) {
         int status = 0;
-        waitpid(-job->pgid, &status, WUNTRACED);
+        pid_t waited_pid = waitpid(-job->pgid, &status, WUNTRACED);
         if (WIFSTOPPED(status)) {
             stopped = 1;
+        } else if (waited_pid == last_pid) {
+            *out_exit_status = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
         }
     }
     job->state = stopped ? JOB_STOPPED : JOB_DONE;

@@ -1,7 +1,8 @@
 #include "builtins/kill.h"
 #include "builtins/job_id.h"
-#include "exit_status.h"
-#include "jobs.h"
+#include "core/exit_status.h"
+#include "jobs/job_table.h"
+#include <errno.h>
 #include <signal.h>
 #include <string.h>
 
@@ -50,7 +51,7 @@ builtin_result_t builtin_kill(struct Command* pipeline)
     char** argv = pipeline[0].argv;
     if (argv[1] == NULL) {
         fprintf(stderr, "kill: job id required\n");
-        last_exit_status = 1;
+        last_exit_status = EINVAL;
         return BUILTIN_HANDLED;
     }
 
@@ -59,7 +60,7 @@ builtin_result_t builtin_kill(struct Command* pipeline)
     if (argv[1][0] == '-') {
         if (!parse_signal_flag(argv[1] + 1, &sig)) {
             fprintf(stderr, "kill: unknown signal %s\n", argv[1]);
-            last_exit_status = 1;
+            last_exit_status = EINVAL;
             return BUILTIN_HANDLED;
         }
         job_id_arg = 2;
@@ -67,24 +68,24 @@ builtin_result_t builtin_kill(struct Command* pipeline)
 
     if (argv[job_id_arg] == NULL) {
         fprintf(stderr, "kill: job id required\n");
-        last_exit_status = 1;
+        last_exit_status = EINVAL;
         return BUILTIN_HANDLED;
     }
     int job_id;
     if (!parse_job_id(argv[job_id_arg], "kill", &job_id)) {
-        last_exit_status = 1;
+        last_exit_status = errno;
         return BUILTIN_HANDLED;
     }
     job_t* job = find_job(job_id);
     if (job == NULL) {
         fprintf(stderr, "kill: no such job\n");
-        last_exit_status = 1;
+        last_exit_status = ESRCH;
         return BUILTIN_HANDLED;
     }
 
     if (kill(-job->pgid, sig) < 0) {
+        last_exit_status = errno;
         perror("kill failed");
-        last_exit_status = 1;
     } else {
         last_exit_status = 0;
     }

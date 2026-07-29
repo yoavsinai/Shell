@@ -1,7 +1,8 @@
-#include "parse_command.h"
-#include "exit_status.h"
-#include "lexer.h"
+#include "parsing/parse_command.h"
+#include "core/exit_status.h"
+#include "parsing/lexer.h"
 #include <ctype.h>
+#include <errno.h>
 
 int parse_command(char* cmd_str, struct Command* cmd)
 {
@@ -54,11 +55,13 @@ int parse_command(char* cmd_str, struct Command* cmd)
             token = strtok_r(NULL, delim, &saveptr);
             if (token == NULL) {
                 fprintf(stderr, "Error: No input file specified for redirection\n");
+                last_exit_status = EINVAL;
                 return 1;
             }
             unquote_token(token);
             cmd->in_fd = open(token, O_RDONLY);
             if (cmd->in_fd < 0) {
+                last_exit_status = errno;
                 perror("open input failed");
                 return 1;
             }
@@ -67,11 +70,13 @@ int parse_command(char* cmd_str, struct Command* cmd)
             token = strtok_r(NULL, delim, &saveptr);
             if (token == NULL) {
                 fprintf(stderr, "Error: No output file specified for redirection\n");
+                last_exit_status = EINVAL;
                 return 1;
             }
             unquote_token(token);
             cmd->out_fd = open(token, O_WRONLY | O_CREAT | O_TRUNC, 0644);
             if (cmd->out_fd < 0) {
+                last_exit_status = errno;
                 perror("open output failed");
                 return 1;
             }
@@ -80,11 +85,13 @@ int parse_command(char* cmd_str, struct Command* cmd)
             token = strtok_r(NULL, delim, &saveptr);
             if (token == NULL) {
                 fprintf(stderr, "Error: No output file specified for append redirection\n");
+                last_exit_status = EINVAL;
                 return 1;
             }
             unquote_token(token);
             cmd->out_fd = open(token, O_WRONLY | O_CREAT | O_APPEND, 0644);
             if (cmd->out_fd < 0) {
+                last_exit_status = errno;
                 perror("open append failed");
                 return 1;
             }

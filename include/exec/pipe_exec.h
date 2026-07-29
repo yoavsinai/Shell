@@ -1,7 +1,7 @@
 #ifndef PIPE_EXEC_H
 #define PIPE_EXEC_H
 
-#include "command.h"
+#include "core/command.h"
 
 // Forks one child per stage, wires up in_fd/out_fd via dup2, execvp's the
 // stage's argv, and either waits for all children to finish (foreground)

@@ -1,8 +1,8 @@
 #ifndef SIGNAL_HANDLER_H
 #define SIGNAL_HANDLER_H
 
-#include "command.h"
-#include "jobs.h"
+#include "core/command.h"
+#include "jobs/job_table.h"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

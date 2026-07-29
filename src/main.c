@@ -1,11 +1,8 @@
-#include "builtins.h"
-#include "command.h"
-#include "jobs.h"
-#include "lexer.h"
-#include "parse_command.h"
-#include "pipe_connect.h"
-#include "pipe_exec.h"
-#include "shell_init.h"
+#include "core/command.h"
+#include "jobs/job_table.h"
+#include "parsing/lexer.h"
+#include "line/segment_scheduler.h"
+#include "system/shell_init.h"
 
 int main()
 {
@@ -44,47 +41,8 @@ int main()
         char normalized_line[LINE_BUFFER_SIZE * 2];
         normalize_redirects(line, normalized_line, sizeof(normalized_line));
 
-        static struct Command pipeline[MAX_PIPELINE_STAGES];
-        char pipe_delim[] = "|";
-        int num_cmds = 0;
-        char* pipe_saveptr = NULL;
-        char* stage = strtok_r(normalized_line, pipe_delim, &pipe_saveptr);
-        while (stage != NULL && num_cmds < MAX_PIPELINE_STAGES - 1) {
-            if (parse_command(stage, &pipeline[num_cmds++])) {
-                fprintf(stderr, "Error parsing command: %s\n", stage);
-                num_cmds = 0;
-                break;
-            }
-            stage = strtok_r(NULL, pipe_delim, &pipe_saveptr);
-        }
-
-        if (num_cmds == MAX_PIPELINE_STAGES - 1 && stage != NULL) {
-            fprintf(stderr, "Error: Too many commands in pipeline (max %d)\n", MAX_PIPELINE_STAGES);
-            continue;
-        }
-
-        if (num_cmds == 0 || pipeline[0].argv[0] == NULL)
-            continue;
-
-        int empty_stage = 0;
-        for (int i = 0; i < num_cmds; i++) {
-            if (pipeline[i].argv[0] == NULL) {
-                fprintf(stderr, "Error: empty command in pipeline\n");
-                empty_stage = 1;
-                break;
-            }
-        }
-        if (empty_stage)
-            continue;
-
-        builtin_result_t builtin_result = run_builtin(pipeline, history_path, pw);
-        if (builtin_result == BUILTIN_EXIT)
+        if (run_chain_segments(normalized_line, line, history_path, pw))
             break;
-        if (builtin_result == BUILTIN_HANDLED)
-            continue;
-
-        connect_pipeline(pipeline, num_cmds);
-        execute_pipeline(pipeline, num_cmds, line);
     }
     return 0;
 }

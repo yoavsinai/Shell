@@ -1,13 +1,14 @@
 #include "builtins/history.h"
-#include "command.h"
-#include "exit_status.h"
+#include "core/command.h"
+#include "core/exit_status.h"
+#include <errno.h>
 
 builtin_result_t builtin_history(const char* history_path)
 {
     FILE* history_file = fopen(history_path, "r");
     if (history_file == NULL) {
+        last_exit_status = errno;
         perror("fopen history file failed");
-        last_exit_status = 1;
         return BUILTIN_HANDLED;
     }
     char history_line[LINE_BUFFER_SIZE];

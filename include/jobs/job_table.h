@@ -1,7 +1,7 @@
-#ifndef JOBS_H
-#define JOBS_H
+#ifndef JOB_TABLE_H
+#define JOB_TABLE_H
 
-#include "command.h"
+#include "core/command.h"
 
 #define MAX_JOBS 100
 
@@ -45,7 +45,10 @@ job_t* find_job(int job_id);
 // and updates job->state accordingly (JOB_STOPPED or JOB_DONE). A SIGTSTP
 // stops the whole process group at once, but waitpid() only reports one
 // event per call, so this waits once per member pid (on the group, not a
-// single pid) to collect them all.
-void wait_for_job(job_t* job);
+// single pid) to collect them all. If the job runs to completion,
+// *out_exit_status is set to the real exit status of its last pipeline
+// stage (128+signal if that stage died from a signal); left untouched if
+// the job stops again instead.
+void wait_for_job(job_t* job, int* out_exit_status);
 
 #endif

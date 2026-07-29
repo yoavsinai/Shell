@@ -1,7 +1,7 @@
 #ifndef PARSE_COMMAND_H
 #define PARSE_COMMAND_H
 
-#include "command.h"
+#include "core/command.h"
 
 // Tokenizes one pipeline stage (already split off by '|') into cmd->argv,
 // applying '<'/'>'/'>>' redirection into cmd->in_fd/out_fd as encountered.
